@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Advanced Cost Calculator with Radio Buttons</title>
+<style>
+  :root {
+    --primary-color: #4a90e2;
+    --secondary-color: #f5f7fa;
+    --accent-color: #d0021b;
+    --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  }
+  body {
+    margin: 2rem;
+    font-family: var(--font-family);
+    background: var(--secondary-color);
+    color: #333;
+  }
+  .container {
+    max-width: 480px;
+    margin: 0 auto;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    padding: 2rem;
+  }
+  h1 {
+    text-align: center;
+    margin-bottom: 1.5rem;
+    color: var(--primary-color);
+  }
+  form {
+    display: grid;
+    gap: 1.5rem;
+  }
+  .option-group {
+    display: flex;
+    flex-direction: column;
+  }
+  .option-group label {
+    display: flex;
+    align-items: center;
+    padding: 0.5rem 1rem;
+    border: 2px solid transparent;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: border-color 0.3s ease;
+    user-select: none;
+  }
+  .option-group input[type="radio"] {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 22px;
+    height: 22px;
+    border: 2px solid var(--primary-color);
+    border-radius: 50%;
+    margin-right: 1rem;
+    position: relative;
+    cursor: pointer;
+    outline-offset: 3px;
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+  }
+  .option-group input[type="radio"]:checked {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+  }
+  .option-group input[type="radio"]:checked::after {
+    content: "";
+    position: absolute;
+    top: 5px;
+    left: 5px;
+    width: 10px;
+    height: 10px;
+    background: white;
+    border-radius: 50%;
+    pointer-events: none;
+  }
+  .option-group label:hover {
+    border-color: var(--primary-color);
+    background: #e6f0fb;
+  }
+  .cost-display {
+    text-align: center;
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--accent-color);
+    margin-top: 1.5rem;
+  }
+  .button {
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    justify-self: center;
+  }
+  .button:hover {
+    background: #357abd;
+  }
+</style>
+</head>
+<body>
+<div class="container" role="region" aria-labelledby="calcTitle">
+  <h1 id="calcTitle">Service Cost Calculator</h1>
+  <form id="costForm" aria-describedby="costDesc">
+    <fieldset class="option-group" aria-labelledby="serviceLabel">
+      <legend id="serviceLabel">Select Service Type</legend>
+      <label>
+        <input type="radio" name="service" value="basic" data-cost="50" required />
+        Basic Service - $50
+      </label>
+      <label>
+        <input type="radio" name="service" value="standard" data-cost="100" />
+        Standard Service - $100
+      </label>
+      <label>
+        <input type="radio" name="service" value="premium" data-cost="180" />
+        Premium Service - $180
+      </label>
+    </fieldset>
+    <fieldset class="option-group" aria-labelledby="durationLabel">
+      <legend id="durationLabel">Select Duration</legend>
+      <label>
+        <input type="radio" name="duration" value="1" data-multiplier="1" required />
+        1 Month
+      </label>
+      <label>
+        <input type="radio" name="duration" value="3" data-multiplier="0.9" />
+        3 Months (10% discount)
+      </label>
+      <label>
+        <input type="radio" name="duration" value="6" data-multiplier="0.8" />
+        6 Months (20% discount)
+      </label>
+    </fieldset>
+    <button type="submit" class="button" aria-describedby="costDesc">Calculate Cost</button>
+  </form>
+  <div id="costDesc" class="cost-display" aria-live="polite" aria-atomic="true" role="alert">
+    Total Cost: $0.00
+  </div>
+</div>
+
+<script>
+  (() => {
+    const form = document.getElementById('costForm');
+    const costDisplay = document.getElementById('costDesc');
+
+    // Format number as currency with locale sensitive formatting
+    const formatCurrency = (num) =>
+      new Intl.NumberFormat(navigator.language, { style: 'currency', currency: 'USD' }).format(num);
+
+    form.addEventListener('submit', e => {
+      e.preventDefault();
+
+      // Get selected service radio button
+      const serviceRadios = form.elements['service'];
+      const selectedService = Array.from(serviceRadios).find(r => r.checked);
+      if (!selectedService) return;
+
+      // Get selected duration radio button
+      const durationRadios = form.elements['duration'];
+      const selectedDuration = Array.from(durationRadios).find(r => r.checked);
+      if (!selectedDuration) return;
+
+      // Extract cost and multiplier data attributes
+      const baseCost = parseFloat(selectedService.dataset.cost);
+      const multiplier = parseFloat(selectedDuration.dataset.multiplier);
+      const months = parseInt(selectedDuration.value, 10);
+
+      // Complex calculation: baseCost * months * multiplier with tax and discount
+      // Adding dynamic tax rate based on cost threshold
+      let taxRate = 0.07; // 7% default tax
+      if (baseCost * months * multiplier > 500) {
+        taxRate = 0.05; // 5% tax for high value
+      }
+
+      // Additional complexity: service fee depends on service type
+      const serviceFees = {
+        basic: 5,
+        standard: 10,
+        premium: 20
+      };
+      const serviceFee = serviceFees[selectedService.value] || 0;
+
+      // Final cost = (baseCost * months * multiplier) + serviceFee + tax
+      const subtotal = baseCost * months * multiplier + serviceFee;
+      const taxAmount = subtotal * taxRate;
+      const totalCost = subtotal + taxAmount;
+
+      // Animate cost display change
+      animateCostChange(costDisplay, totalCost);
+    });
+
+    // Animate number changes smoothly
+    function animateCostChange(element, newValue) {
+      const duration = 600;
+      const startValue = parseFloat(element.textContent.replace(/[^0-9.-]+/g,"")) || 0;
+      const startTime = performance.now();
+
+      function animate(time) {
+        const elapsed = time - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        const currentValue = startValue + (newValue - startValue) * easeOutCubic(progress);
+        element.textContent = `Total Cost: ${formatCurrency(currentValue)}`;
+        if (progress < 1) {
+          requestAnimationFrame(animate);
+        }
+      }
+      requestAnimationFrame(animate);
+    }
+
+    // Easing function for smooth animation
+    function easeOutCubic(t) {
+      return 1 - Math.pow(1 - t, 3);
+    }
+  })();
+</script>
+</body>
+</html>
+```
